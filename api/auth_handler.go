@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"hotel-reservation/db"
 	"hotel-reservation/types"
+	"net/http"
 	"os"
 	"time"
 )
@@ -32,6 +33,18 @@ type AuthResponse struct {
 	Token string      `json:"token"`
 }
 
+type genericResponse struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
+func invalidCredentials(c *fiber.Ctx) error {
+	return c.Status(http.StatusBadRequest).JSON(genericResponse{
+		Type:    "error",
+		Message: "invalid credentials",
+	})
+}
+
 // A handler should only do
 //   - serialization of the incpming request (JSON)
 //   - do some data fetching
@@ -47,14 +60,14 @@ func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
 	user, err := h.userStore.GetUserByEmail(c.Context(), params.Email)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return fmt.Errorf("invalid credentials")
+			return invalidCredentials(c)
 		}
 
 		return err
 	}
 
 	if !types.IsValidPassword(user.EncryptedPassword, params.Password) {
-		return fmt.Errorf("invalid credentials")
+		return invalidCredentials(c)
 	}
 
 	resp := AuthResponse{
