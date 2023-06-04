@@ -1,5 +1,13 @@
 # Hotel reservation backend
 
+# Project env
+```
+HTTP_LISTEN_ADDRESS=:3000
+JWT_SECRET=somethingsupersecret
+MONGO_DB_NAME=hotel-reservation
+MONGO_DB_URL=mongodb://localhost:27017
+```
+
 ## Project outline
 - Users -> book room from a hotel
 - Admins -> going to check reservation
