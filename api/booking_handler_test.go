@@ -24,7 +24,7 @@ func TestBookingHandler_HandleGetBooking(t *testing.T) {
 		from           = time.Now()
 		till           = from.AddDate(0, 0, 5)
 		booking        = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
-		app            = fiber.New()
+		app            = fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 		route          = app.Group("/", JWTAuthentication(db.User))
 		bookingHandler = NewBookingHandler(*db.Store)
 	)
