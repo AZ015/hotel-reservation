@@ -4,7 +4,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"hotel-reservation/db"
-	"hotel-reservation/types"
 	"net/http"
 )
 
@@ -16,6 +15,31 @@ func NewBookingHandler(store db.Store) *BookingHandler {
 	return &BookingHandler{
 		store: store,
 	}
+}
+
+func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
+	id := c.Params("id")
+	booking, err := h.store.Booking.GetBookingByID(c.Context(), id)
+	if err != nil {
+		return err
+	}
+	user, err := getAuthUser(c)
+	if err != nil {
+		return err
+	}
+
+	if booking.UserID != user.ID {
+		return c.Status(http.StatusUnauthorized).JSON(genericResponse{
+			Type:    "error",
+			Message: "not authorized",
+		})
+	}
+
+	if err := h.store.Booking.UpdateBooking(c.Context(), id, bson.M{"canceled": true}); err != nil {
+		return err
+	}
+
+	return c.JSON(genericResponse{Type: "msg", Message: "updated"})
 }
 
 // TODO: this needs to admon auth
@@ -36,8 +60,8 @@ func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 		return err
 	}
 
-	user, ok := c.Context().UserValue("user").(*types.User)
-	if !ok {
+	user, err := getAuthUser(c)
+	if err != nil {
 		return err
 	}
 
