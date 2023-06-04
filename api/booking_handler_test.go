@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"hotel-reservation/api/middleware"
 	"hotel-reservation/db/fixtures"
 	"hotel-reservation/types"
 	"net/http"
@@ -26,7 +25,7 @@ func TestBookingHandler_HandleGetBooking(t *testing.T) {
 		till           = from.AddDate(0, 0, 5)
 		booking        = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
 		app            = fiber.New()
-		route          = app.Group("/", middleware.JWTAuthentication(db.User))
+		route          = app.Group("/", JWTAuthentication(db.User))
 		bookingHandler = NewBookingHandler(*db.Store)
 	)
 	_ = booking
@@ -81,8 +80,8 @@ func TestBookingHandler_HandleGetBookings(t *testing.T) {
 		from           = time.Now()
 		till           = from.AddDate(0, 0, 5)
 		booking        = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
-		app            = fiber.New()
-		admin          = app.Group("/", middleware.JWTAuthentication(db.User), middleware.AdminAuth)
+		app            = fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
+		admin          = app.Group("/", JWTAuthentication(db.User), AdminAuth)
 		bookingHandler = NewBookingHandler(*db.Store)
 	)
 	_ = booking
@@ -124,7 +123,7 @@ func TestBookingHandler_HandleGetBookings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("non a non 200 status got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected status 401 but got %d", resp.StatusCode)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"hotel-reservation/db"
 	"hotel-reservation/types"
-	"net/http"
 	"time"
 )
 
@@ -40,7 +39,7 @@ func NewRoomHandler(store db.Store) *RoomHandler {
 func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 	rooms, err := h.store.Room.GetRooms(c.Context(), bson.M{})
 	if err != nil {
-		return err
+		return ErrResourceNotFound("rooms")
 	}
 
 	return c.JSON(rooms)
@@ -49,7 +48,7 @@ func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	var params BookRoomParams
 	if err := c.BodyParser(&params); err != nil {
-		return err
+		return ErrBadRequest()
 	}
 
 	if err := params.validate(); err != nil {
@@ -58,15 +57,12 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 
 	roomID, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
-		return err
+		return ErrInvalidID()
 	}
 
 	user, ok := c.Context().Value("user").(*types.User)
 	if !ok {
-		return c.Status(http.StatusInternalServerError).JSON(genericResponse{
-			Type:    "error",
-			Message: "internal server error",
-		})
+		return ErrNotAuthorized()
 	}
 
 	ok, err = h.isRoomAvailableForBooking(c.Context(), roomID, params)
@@ -75,10 +71,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	}
 
 	if !ok {
-		return c.Status(http.StatusBadRequest).JSON(genericResponse{
-			Type:    "error",
-			Message: fmt.Sprintf("room %s already booked", c.Params("id")),
-		})
+		return ErrBadRequest()
 	}
 
 	booking := types.Booking{
@@ -109,7 +102,7 @@ func (h *RoomHandler) isRoomAvailableForBooking(ctx context.Context, roomID prim
 	}
 	bookings, err := h.store.Booking.GetBookings(ctx, where)
 	if err != nil {
-		return false, err
+		return false, ErrResourceNotFound("bookings")
 	}
 
 	ok := len(bookings) == 0
